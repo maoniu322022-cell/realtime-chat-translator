@@ -1,173 +1,27 @@
-# 🔐 1对1 加密聊天 + 自动翻译
+# Secure 1-to-1 Chat Translator
 
-一个安全的 1对1 实时聊天应用，支持**端到端加密**和**自动翻译**。
+An English-language 1-to-1 chat application with account registration, sign-in, automatic translation, and encrypted messages.
 
-## ✨ 功能特性
+## Features
 
-- **1对1 私聊**：仅支持两个用户间的直接通讯
-- **端到端加密**：所有消息使用 AES-256-CBC 加密
-- **自动翻译**：消息自动翻译为对方首选语言
-- **在线状态**：实时显示用户在线状态
-- **聊天请求**：接受或拒绝聊天邀请
-- **原文+译文**：同时显示原始文本和翻译
-- **中英双语**：支持中文和英文界面
+- Account registration and sign-in
+- Password hashing with Node.js `scrypt`
+- Private 1-to-1 chat requests
+- AES-256-CBC message encryption
+- Automatic translation to the recipient's preferred language
+- Online contacts and connection status
 
-## 🛠 技术栈
-
-- **前端**：React + Vite
-- **后端**：Node.js + Express + Socket.IO
-- **加密**：Node.js 原生 `crypto` 模块 (AES-256-CBC)
-- **翻译**：Argos Translate 公开接口
-
-## 📁 项目结构
-
-```
-.
-├── server/              # Express + Socket.IO 后端
-│   ├── index.js         # 服务器逻辑（加密）
-│   └── package.json
-├── client/              # React 前端
-│   ├── src/
-│   │   ├── App.jsx      # 主聊天组件
-│   │   ├── main.jsx     # React 入口
-│   │   └── index.css    # 样式表
-│   ├── index.html
-│   ├── vite.config.js
-│   └── package.json
-├── package.json         # 根工作区配置
-└── README.md
-```
-
-## 📦 安装
+## Run locally
 
 ```bash
-npm install
-```
-
-## 🚀 启动应用
-
-```bash
-npm run dev
-```
-
-然后在浏览器中打开：
-
-```
-http://localhost:5173
-```
-
-## 💬 使用方式
-
-### 1. 注册用户
-
-- 输入唯一的 **用户ID**（如 `alice_001`）
-- 输入 **用户名**（显示名称）
-- 选择 **首选语言**
-
-### 2. 浏览联系人
-
-- 注册后会看到所有在线用户列表
-- 每个用户显示其用户名和语言
-
-### 3. 发起聊天
-
-- 点击用户旁的 "聊天" 按钮发起对话
-- 对方会收到聊天请求通知
-
-### 4. 接受/拒绝请求
-
-- 在 "聊天请求" 面板中接受或拒绝邀请
-
-### 5. 发送消息
-
-- 对话建立后，在输入框输入消息
-- 按 Enter 或点击发送按钮
-- 消息会自动加密并翻译发送
-
-## 🔐 加密流程
-
-1. **初始化**：每个对话生成一个共享密钥（256位）
-2. **加密**：消息使用 AES-256-CBC 算法加密
-3. **传输**：每条消息包含随机 IV（初始化向量）
-4. **解密**：仅对话双方可解密消息
-
-## 🌍 翻译流程
-
-1. **检测语言**：自动检测发送者的消息语言
-2. **判断翻译**：如果接收者语言不同，则翻译
-3. **双语显示**：接收者同时看到原文和译文
-
-## 📋 示例工作流
-
-1. **Alice**（中文）以用户ID `alice_001` 注册
-2. **Bob**（英文）以用户ID `bob_001` 注册
-3. Alice 点击 Bob 旁的 "聊天" 发起对话
-4. Bob 看到聊天请求，点击 "接受"
-5. Alice 输入 "你好" → Bob 收到英文翻译
-6. Bob 输入 "Hello" → Alice 收到中文翻译
-7. 所有消息都被端到端加密保护
-
-## 🔧 环境变量
-
-在项目根目录创建 `.env` 文件（可选）：
-
-```env
-PORT=3001
-VITE_SOCKET_URL=http://localhost:3001
-```
-
-## 📦 生产构建
-
-```bash
-npm run build
-```
-
-启动后端：
-
-```bash
-npm run start
-```
-
-## 🔒 安全说明
-
-- **加密**：使用 Node.js 原生 `crypto` 模块的 AES-256-CBC
-- **密钥管理**：密钥在内存中生成，服务器重启后丢失（可改进）
-- **翻译接口**：使用公开 API；生产环境建议使用自建或付费服务
-- **Socket.IO 安全**：生产环境需添加身份验证中间件和 SSL/TLS
-
-## 🚧 局限与改进建议
-
-**当前版本局限**：
-- 对话存储在内存中（服务器重启后丢失）
-- 没有用户认证机制
-- 消息不能删除或编辑
-
-**可增加的功能**：
-- 数据库存储消息记录
-- 用户注册与登录
-- 消息删除/编辑
-- 文件/图片分享
-- 语音/视频通话
-- 已读回执
-- 输入状态指示器
-- 消息加密传输全程追踪
-
-## 📄 许可
-
-MIT
-
-## 👨‍💻 开发者
-
-Made with ❤️ by Copilot
-
----
-
-**快速开始**：
-```bash
-git clone <repository>
-cd realtime-chat-translator
 npm install
 npm run dev
 ```
 
-访问 http://localhost:5173 开始聊天！
+Open `http://localhost:5173`.
+
+Create an account in one browser window, then create a second account in an incognito window or another browser to test 1-to-1 chat.
+
+## Important limitation
+
+Accounts and conversations are currently stored in server memory. They are cleared when the server restarts. For production, add a database, HTTPS/WSS, authentication tokens, rate limiting, and a production translation provider.

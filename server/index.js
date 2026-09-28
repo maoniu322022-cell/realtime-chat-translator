@@ -6,258 +6,189 @@ import crypto from 'crypto';
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
-});
-
+const io = new Server(httpServer, { cors: { origin: '*', methods: ['GET', 'POST'] } });
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+app.get('/health', (_req, res) => res.json({ ok: true, message: 'Secure chat server is running' }));
 
-app.get('/health', (_req, res) => {
-  res.json({ ok: true, message: '1对1加密聊天服务器运行中' });
-});
-
-// 活跃用户: { userId: { socketId, username, preferredLanguage } }
+const accounts = new Map();
 const activeUsers = new Map();
-// 用户映射: { userId: socketId }
 const userSockets = new Map();
-// 对话: { conversationId: { user1Id, user2Id, sharedSecret } }
 const conversations = new Map();
 
-function generateConversationId(userId1, userId2) {
-  return [userId1, userId2].sort().join('_');
+function hashPassword(password, salt) {
+  return crypto.scryptSync(password, salt, 64).toString('hex');
 }
 
-function generateSharedSecret() {
+function verifyPassword(password, account) {
+  try {
+    const actual = hashPassword(password, account.salt);
+    return crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(account.passwordHash, 'hex'));
+  } catch {
+    return false;
+  }
+}
+
+function publicUser(account) {
+  return { userId: account.userId, username: account.username, preferredLanguage: account.preferredLanguage };
+}
+
+function conversationIdFor(firstUserId, secondUserId) {
+  return [firstUserId, secondUserId].sort().join('_');
+}
+
+function createSharedSecret() {
   return crypto.randomBytes(32).toString('hex');
 }
 
 function encryptMessage(message, sharedSecret) {
   try {
-    const algorithm = 'aes-256-cbc';
-    const key = Buffer.from(sharedSecret, 'hex');
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(algorithm, key, iv);
-
-    let encrypted = cipher.update(message, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
+    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(sharedSecret, 'hex'), iv);
+    return `${iv.toString('hex')}:${cipher.update(message, 'utf8', 'hex')}${cipher.final('hex')}`;
   } catch (error) {
-    console.error('加密错误:', error);
+    console.error('Encryption error:', error);
     return null;
   }
 }
 
 async function translateText(text, targetLanguage) {
-  if (!text || !targetLanguage) return text;
-
   try {
     const response = await fetch('https://translate.argosopentech.com/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        q: text,
-        source: 'auto',
-        target: targetLanguage,
-        format: 'text'
-      })
+      body: JSON.stringify({ q: text, source: 'auto', target: targetLanguage, format: 'text' })
     });
-
-    if (!response.ok) throw new Error(`翻译请求失败: ${response.status}`);
-
+    if (!response.ok) throw new Error(`Translation request failed: ${response.status}`);
     const data = await response.json();
     return data?.translatedText || text;
   } catch (error) {
-    console.warn('翻译失败，使用原文:', error.message);
+    console.warn('Translation failed; using original text:', error.message);
     return text;
   }
 }
 
-io.on('connection', (socket) => {
-  console.log('用户已连接:', socket.id);
+function emitOnlineUsers(socket) {
+  socket.emit('online-users', Array.from(activeUsers.values()).map((user) => ({
+    userId: user.userId,
+    username: user.username,
+    preferredLanguage: user.preferredLanguage
+  })));
+}
 
-  socket.on('register-user', ({ userId, username, preferredLanguage }) => {
-    if (!userId || !username) {
-      socket.emit('error-message', { message: '需要用户ID和用户名' });
+io.on('connection', (socket) => {
+  socket.on('register-account', ({ userId, username, password, preferredLanguage }) => {
+    if (!userId?.trim() || !username?.trim() || !password) {
+      socket.emit('auth-error', { message: 'User ID, display name, and password are required.' });
+      return;
+    }
+    if (!/^[a-zA-Z0-9_-]{3,32}$/.test(userId.trim())) {
+      socket.emit('auth-error', { message: 'User ID must be 3-32 characters: letters, numbers, _ or -.' });
+      return;
+    }
+    if (password.length < 6) {
+      socket.emit('auth-error', { message: 'Password must be at least 6 characters.' });
+      return;
+    }
+    if (accounts.has(userId.trim())) {
+      socket.emit('auth-error', { message: 'That user ID is already registered. Please sign in.' });
       return;
     }
 
-    activeUsers.set(userId, {
-      userId,
-      socketId: socket.id,
-      username,
-      preferredLanguage: preferredLanguage || 'en'
-    });
-
-    userSockets.set(userId, socket.id);
-    socket.data.userId = userId;
-    socket.data.username = username;
-    socket.data.preferredLanguage = preferredLanguage || 'en';
-
-    // 广播用户上线
-    io.emit('user-online', {
-      userId,
-      username,
-      preferredLanguage: socket.data.preferredLanguage
-    });
-
-    socket.emit('user-registered', {
-      userId,
-      username,
-      preferredLanguage: socket.data.preferredLanguage
-    });
-
-    // 发送在线用户列表
-    socket.emit('online-users', Array.from(activeUsers.values()));
-    console.log(`用户已注册: ${userId} (${username})`);
+    const salt = crypto.randomBytes(16).toString('hex');
+    const account = { userId: userId.trim(), username: username.trim(), preferredLanguage: preferredLanguage || 'en', salt, passwordHash: hashPassword(password, salt) };
+    accounts.set(account.userId, account);
+    activeUsers.set(account.userId, { ...publicUser(account), socketId: socket.id });
+    userSockets.set(account.userId, socket.id);
+    socket.data.userId = account.userId;
+    socket.emit('auth-success', { user: publicUser(account) });
+    io.emit('user-online', publicUser(account));
+    emitOnlineUsers(socket);
+    console.log(`User registered: ${account.userId}`);
   });
 
-  socket.on('get-online-users', () => {
-    socket.emit('online-users', Array.from(activeUsers.values()));
+  socket.on('login-account', ({ userId, password }) => {
+    const account = accounts.get(userId?.trim());
+    if (!account || !password || !verifyPassword(password, account)) {
+      socket.emit('auth-error', { message: 'Invalid user ID or password.' });
+      return;
+    }
+    activeUsers.set(account.userId, { ...publicUser(account), socketId: socket.id });
+    userSockets.set(account.userId, socket.id);
+    socket.data.userId = account.userId;
+    socket.emit('auth-success', { user: publicUser(account) });
+    io.emit('user-online', publicUser(account));
+    emitOnlineUsers(socket);
+    console.log(`User logged in: ${account.userId}`);
   });
+
+  socket.on('get-online-users', () => emitOnlineUsers(socket));
 
   socket.on('initiate-conversation', ({ targetUserId }) => {
     const senderId = socket.data.userId;
-
-    if (!senderId || !targetUserId || senderId === targetUserId) {
-      socket.emit('error-message', { message: '无效的收件人' });
+    const target = activeUsers.get(targetUserId);
+    if (!senderId || !target || senderId === targetUserId) {
+      socket.emit('error-message', { message: 'That user is not available.' });
       return;
     }
-
-    const conversationId = generateConversationId(senderId, targetUserId);
-    let conversation = conversations.get(conversationId);
-
-    if (!conversation) {
-      conversation = {
-        conversationId,
-        user1Id: senderId,
-        user2Id: targetUserId,
-        sharedSecret: generateSharedSecret()
-      };
-      conversations.set(conversationId, conversation);
+    const conversationId = conversationIdFor(senderId, targetUserId);
+    if (!conversations.has(conversationId)) {
+      conversations.set(conversationId, { conversationId, user1Id: senderId, user2Id: targetUserId, sharedSecret: createSharedSecret() });
     }
-
-    const targetSocketId = userSockets.get(targetUserId);
-    const senderUser = activeUsers.get(senderId);
-
-    socket.emit('conversation-initiated', {
-      conversationId,
-      targetUserId,
-      targetUser: activeUsers.get(targetUserId)
-    });
-
-    if (targetSocketId) {
-      io.to(targetSocketId).emit('conversation-request', {
-        conversationId,
-        senderId,
-        senderUser
-      });
-    }
+    socket.emit('conversation-initiated', { conversationId, targetUserId, targetUser: target });
+    io.to(target.socketId).emit('conversation-request', { conversationId, senderId, senderUser: activeUsers.get(senderId) });
   });
 
   socket.on('accept-conversation', ({ conversationId }) => {
-    const userId = socket.data.userId;
     const conversation = conversations.get(conversationId);
-
-    if (!conversation) {
-      socket.emit('error-message', { message: '对话不存在' });
+    const userId = socket.data.userId;
+    if (!conversation || !userId || ![conversation.user1Id, conversation.user2Id].includes(userId)) {
+      socket.emit('error-message', { message: 'Conversation not found.' });
       return;
     }
-
     const otherUserId = conversation.user1Id === userId ? conversation.user2Id : conversation.user1Id;
-    const otherSocketId = userSockets.get(otherUserId);
-
-    socket.emit('conversation-accepted', {
-      conversationId,
-      otherUserId,
-      otherUser: activeUsers.get(otherUserId)
-    });
-
-    if (otherSocketId) {
-      io.to(otherSocketId).emit('conversation-accepted', {
-        conversationId,
-        otherUserId: userId,
-        otherUser: activeUsers.get(userId)
-      });
-    }
-
-    console.log(`对话已接受: ${conversationId}`);
+    const otherUser = activeUsers.get(otherUserId);
+    socket.emit('conversation-accepted', { conversationId, otherUserId, otherUser });
+    if (otherUser) io.to(otherUser.socketId).emit('conversation-accepted', { conversationId, otherUserId: userId, otherUser: activeUsers.get(userId) });
   });
 
   socket.on('chat:send', async ({ conversationId, text }) => {
-    if (!conversationId || !text || !text.trim()) {
-      return;
-    }
-
     const senderId = socket.data.userId;
     const conversation = conversations.get(conversationId);
-
-    if (!conversation) {
-      socket.emit('error-message', { message: '对话不存在' });
+    if (!senderId || !conversation || !text?.trim() || ![conversation.user1Id, conversation.user2Id].includes(senderId)) {
+      socket.emit('error-message', { message: 'Unable to send this message.' });
       return;
     }
-
     const recipientId = conversation.user1Id === senderId ? conversation.user2Id : conversation.user1Id;
-    const senderLanguage = socket.data.preferredLanguage || 'en';
-    const recipientUser = activeUsers.get(recipientId);
-    const recipientLanguage = recipientUser?.preferredLanguage || 'en';
-
-    // 加密消息
-    const encryptedMessage = encryptMessage(text.trim(), conversation.sharedSecret);
+    const sender = activeUsers.get(senderId);
+    const recipient = activeUsers.get(recipientId);
+    const originalText = text.trim();
+    const encryptedMessage = encryptMessage(originalText, conversation.sharedSecret);
     if (!encryptedMessage) {
-      socket.emit('error-message', { message: '加密失败' });
+      socket.emit('error-message', { message: 'Message encryption failed.' });
       return;
     }
-
-    // 翻译消息
-    let translatedText = text.trim();
-    if (recipientLanguage && recipientLanguage.toLowerCase() !== senderLanguage.toLowerCase()) {
-      translatedText = await translateText(text.trim(), recipientLanguage);
-    }
-
-    const payload = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      conversationId,
-      senderId,
-      senderName: socket.data.username,
-      text: translatedText,
-      originalText: text.trim(),
-      encryptedMessage,
-      language: senderLanguage,
-      createdAt: new Date().toISOString(),
-      isOwnMessage: true
-    };
-
-    // 发送给发送者
+    const translatedText = recipient && recipient.preferredLanguage !== sender.preferredLanguage
+      ? await translateText(originalText, recipient.preferredLanguage)
+      : originalText;
+    const payload = { id: `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, conversationId, senderId, senderName: sender.username, text: originalText, originalText, encryptedMessage, language: sender.preferredLanguage, createdAt: new Date().toISOString(), isOwnMessage: true };
     socket.emit('chat:message', payload);
-
-    // 发送给接收者
-    const recipientSocketId = userSockets.get(recipientId);
-    if (recipientSocketId) {
-      io.to(recipientSocketId).emit('chat:message', {
-        ...payload,
-        isOwnMessage: false,
-        text: await translateText(text.trim(), recipientLanguage)
-      });
-    }
+    if (recipient) io.to(recipient.socketId).emit('chat:message', { ...payload, text: translatedText, isOwnMessage: false });
   });
 
   socket.on('disconnect', () => {
     const userId = socket.data.userId;
-    if (userId) {
+    if (!userId) return;
+    const active = activeUsers.get(userId);
+    if (active?.socketId === socket.id) {
       activeUsers.delete(userId);
       userSockets.delete(userId);
-      io.emit('user-offline', { userId, username: socket.data.username });
-      console.log(`用户已断开连接: ${userId}`);
+      io.emit('user-offline', { userId, username: active.username });
+      console.log(`User disconnected: ${userId}`);
     }
   });
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`1对1加密聊天服务器运行在 http://localhost:${PORT}`);
-});
+httpServer.listen(PORT, () => console.log(`Secure 1-to-1 chat server running on http://localhost:${PORT}`));

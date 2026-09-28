@@ -3,7 +3,7 @@
 }
 
 :root {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   color: #e5eefb;
   background: #0b1220;
   line-height: 1.5;
@@ -26,6 +26,114 @@ select {
   font: inherit;
 }
 
+/* 登录页面 */
+.login-page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 1rem;
+  background: linear-gradient(135deg, #0b1220, #111827 35%, #1f2a44);
+}
+
+.login-card {
+  background: rgba(15, 23, 42, 0.76);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28);
+  padding: 2rem;
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-card h1 {
+  margin-top: 0;
+  text-align: center;
+  font-size: 2.5rem;
+}
+
+.login-card > p {
+  text-align: center;
+  color: #bfdbfe;
+  margin-bottom: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.field label {
+  font-size: 0.9rem;
+  color: #bfdbfe;
+  font-weight: 500;
+}
+
+.field input,
+.field select,
+.composer input {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.7);
+  color: white;
+  border-radius: 10px;
+  padding: 0.8rem 0.8rem;
+  font-size: 1rem;
+}
+
+.field input:focus,
+.field select:focus,
+.composer input:focus {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.primary-button,
+.composer button {
+  border: none;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.15s ease;
+  font-size: 1rem;
+}
+
+.primary-button {
+  width: 100%;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: white;
+  margin-top: 0.5rem;
+}
+
+.composer button {
+  background: linear-gradient(135deg, #14b8a6, #0ea5e9);
+  color: white;
+  min-width: 100px;
+}
+
+.primary-button:hover,
+.composer button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.primary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.status-text {
+  margin-top: 1.5rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+/* 主应用 */
 .app-shell {
   display: flex;
   height: 100vh;
@@ -42,90 +150,169 @@ select {
 }
 
 .sidebar {
-  width: 320px;
+  width: 340px;
   padding: 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+}
+
+.user-info {
+  color: #dbeafe;
+  font-size: 0.9rem;
   margin: 0 0 1rem;
-  font-size: 1.7rem;
 }
 
-.field {
+.requests-panel {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 12px;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.requests-panel h3 {
+  margin: 0 0 0.75rem;
+  color: #fbbf24;
+  font-size: 0.95rem;
+}
+
+.request-item {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 8px;
+  padding: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.request-item p {
+  margin: 0 0 0.5rem;
+  font-weight: 500;
+}
+
+.request-actions {
   display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
 }
 
-.field label {
-  font-size: 0.85rem;
-  color: #bfdbfe;
-}
-
-.field input,
-.field select,
-.composer input {
-  width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(15, 23, 42, 0.7);
-  color: white;
-  border-radius: 10px;
-  padding: 0.75rem 0.8rem;
-}
-
-.primary-button,
-.composer button {
+.accept-btn,
+.reject-btn {
+  flex: 1;
   border: none;
-  border-radius: 10px;
-  padding: 0.8rem 1rem;
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 0.8rem;
   cursor: pointer;
   font-weight: 600;
-  transition: transform 0.15s ease;
 }
 
-.primary-button {
-  width: 100%;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  color: white;
-  margin-top: 0.25rem;
+.accept-btn {
+  background: rgba(34, 197, 94, 0.3);
+  color: #86efac;
 }
 
-.composer button {
-  background: linear-gradient(135deg, #14b8a6, #0ea5e9);
-  color: white;
-  min-width: 110px;
+.accept-btn:hover {
+  background: rgba(34, 197, 94, 0.5);
 }
 
-.primary-button:hover,
-.composer button:hover {
-  transform: translateY(-1px);
+.reject-btn {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
 }
 
-.member-panel {
-  margin-top: 1.5rem;
+.reject-btn:hover {
+  background: rgba(239, 68, 68, 0.5);
 }
 
-.member-panel h3 {
-  margin-bottom: 0.5rem;
-}
-
-.member-panel ul {
-  list-style: none;
-  padding-left: 0;
-  margin: 0;
+.contacts-panel {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
 }
 
-.member-panel li {
+.contacts-panel h3 {
+  margin: 1rem 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.contacts-panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contacts-panel li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   background: rgba(30, 41, 59, 0.8);
-  padding: 0.5rem 0.8rem;
-  border-radius: 8px;
-  color: #dbeafe;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(96, 165, 250, 0.15);
+  transition: all 0.2s;
 }
 
+.contacts-panel li:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.contacts-panel li div {
+  flex: 1;
+}
+
+.contacts-panel li strong {
+  display: block;
+  color: #dbeafe;
+  margin-bottom: 0.2rem;
+}
+
+.contacts-panel li span {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.contact-btn {
+  border: none;
+  background: linear-gradient(135deg, #3b82f6, #1e40af);
+  color: white;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.contact-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.contact-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #64748b, #475569);
+}
+
+.empty-text {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* 聊天面板 */
 .chat-panel {
   flex: 1;
   display: flex;
@@ -133,11 +320,55 @@ select {
   overflow: hidden;
 }
 
-.status-bar {
-  padding: 0.8rem 1rem;
+.no-conversation {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.no-conversation p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+}
+
+.hint {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.15);
   background: rgba(30, 41, 59, 0.6);
+}
+
+.chat-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.language-badge {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-bar {
+  padding: 0.8rem 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(30, 41, 59, 0.6);
   color: #dbeafe;
+  font-size: 0.85rem;
+  max-height: 60px;
+  overflow-y: auto;
 }
 
 .messages {
@@ -154,6 +385,7 @@ select {
   place-items: center;
   height: 100%;
   color: #94a3b8;
+  font-size: 1rem;
 }
 
 .message {
@@ -161,7 +393,7 @@ select {
   background: rgba(30, 41, 59, 0.8);
   border: 1px solid rgba(96, 165, 250, 0.15);
   border-radius: 14px;
-  padding: 0.8rem 0.9rem;
+  padding: 0.9rem 1rem;
 }
 
 .message.own {
@@ -175,21 +407,29 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.4rem;
   color: #bfdbfe;
   font-size: 0.8rem;
 }
 
 .message-text {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: white;
   word-break: break-word;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
 }
 
 .translation-note {
-  margin-top: 0.5rem;
   color: #a7f3d0;
   font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+}
+
+.message-security {
+  font-size: 0.75rem;
+  color: #60a5fa;
+  text-align: right;
 }
 
 .composer {
@@ -197,10 +437,21 @@ select {
   gap: 0.8rem;
   padding: 1rem;
   border-top: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.5);
 }
 
 .composer input {
   flex: 1;
+}
+
+.composer input:disabled {
+  opacity: 0.5;
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 300px;
+  }
 }
 
 @media (max-width: 760px) {
@@ -210,9 +461,14 @@ select {
 
   .sidebar {
     width: 100%;
+    max-height: 200px;
   }
 
   .message {
-    max-width: 90%;
+    max-width: 85%;
+  }
+
+  .login-card {
+    max-width: 100%;
   }
 }
